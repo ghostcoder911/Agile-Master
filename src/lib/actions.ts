@@ -9,19 +9,21 @@ import {
   suggestAssignee,
 } from "@/lib/analytics";
 import { nowIso, relativeTime, todayKey } from "@/lib/dates";
-import { firstName, memberName, statusLabel } from "@/lib/format";
+import { firstName, memberName, roleLabel, statusLabel } from "@/lib/format";
 import { uid } from "@/lib/ids";
 import { getActor, setActorId } from "@/lib/session";
 import { readWorkspace, resetWorkspace, updateWorkspace } from "@/lib/store";
 import type {
   FollowUp,
   FollowUpType,
+  MemberRole,
   Mood,
   Priority,
   TicketStatus,
   TicketType,
   Workspace,
 } from "@/lib/types";
+import { MEMBER_ROLES } from "@/lib/types";
 
 function bump(paths: string[] = ["/"]) {
   const unique = new Set([
@@ -407,6 +409,104 @@ export async function autoAssignUnowned() {
 
 export async function autoAssignUnownedAction() {
   await autoAssignUnowned();
+}
+
+function initialsFrom(name: string) {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "??";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+}
+
+function hueFrom(name: string) {
+  let hash = 0;
+  for (const ch of name) hash = (hash * 31 + ch.charCodeAt(0)) % 360;
+  return hash;
+}
+
+function slugEmail(name: string) {
+  const slug = name
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ".")
+    .replace(/^\.|\.$/g, "");
+  return `${slug || "teammate"}@harbor.team`;
+}
+
+export async function addMember(formData: FormData) {
+  const name = String(formData.get("name") ?? "").trim();
+  if (!name) return;
+  const roleRaw = String(formData.get("role") ?? "engineer");
+  const role: MemberRole = MEMBER_ROLES.includes(roleRaw as MemberRole)
+    ? (roleRaw as MemberRole)
+    : "engineer";
+  const title = String(formData.get("title") ?? "").trim() || roleLabel[role];
+  const email = String(formData.get("email") ?? "").trim() || slugEmail(name);
+  const skills = String(formData.get("skills") ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const hours = Number(formData.get("weeklyCapacityHours") ?? 40) || 40;
+  const actor = await getActor();
+  const existing = readWorkspace().members.some(
+    (m) => m.email.toLowerCase() === email.toLowerCase()
+  );
+  if (existing) redirect("/team?error=duplicate");
+
+  await updateWorkspace((ws) => {
+    if (ws.members.some((m) => m.email.toLowerCase() === email.toLowerCase())) return;
+    ws.members.push({
+      id: uid("m"),
+      name,
+      email,
+      role,
+      title,
+      initials: initialsFrom(name),
+      hue: hueFrom(name),
+      weeklyCapacityHours: Math.max(1, Math.min(80, hours)),
+      skills,
+    });
+    ws.activity.unshift({
+      id: uid("act"),
+      type: "team",
+      message: `${actor.name} added ${name} to the squad.`,
+      memberId: actor.id,
+      ticketId: null,
+      createdAt: nowIso(),
+    });
+  });
+  revalidatePath("/", "layout");
+  bump();
+  redirect("/team");
+}
+
+export async function removeMember(formData: FormData) {
+  const id = String(formData.get("memberId") ?? "");
+  const actor = await getActor();
+  let nextActor = actor.id;
+  await updateWorkspace((ws) => {
+    if (ws.members.length <= 1) return;
+    const leaving = ws.members.find((m) => m.id === id);
+    if (!leaving) return;
+    ws.members = ws.members.filter((m) => m.id !== id);
+    for (const ticket of ws.tickets) {
+      if (ticket.assigneeId === id) ticket.assigneeId = null;
+    }
+    ws.followUps = ws.followUps.filter((f) => f.memberId !== id);
+    if (nextActor === id) nextActor = ws.members[0].id;
+    ws.activity.unshift({
+      id: uid("act"),
+      type: "team",
+      message: `${actor.name} removed ${leaving.name} from the squad. Their open tickets are unassigned.`,
+      memberId: actor.id === id ? nextActor : actor.id,
+      ticketId: null,
+      createdAt: nowIso(),
+    });
+  });
+  if (nextActor !== actor.id) await setActorId(nextActor);
+  revalidatePath("/", "layout");
+  bump();
+  redirect("/team");
 }
 
 export async function sprintBrief() {

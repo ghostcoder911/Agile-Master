@@ -2,14 +2,30 @@ import { PageHeader } from "@/components/page-header";
 import { MemberAvatar } from "@/components/member-avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { autoAssignUnownedAction, resetDemoData } from "@/lib/actions";
+import {
+  addMember,
+  autoAssignUnownedAction,
+  removeMember,
+  resetDemoData,
+} from "@/lib/actions";
 import { memberLoads } from "@/lib/analytics";
 import { roleLabel } from "@/lib/format";
+import { getActor } from "@/lib/session";
 import { readWorkspace } from "@/lib/store";
+import { MEMBER_ROLES } from "@/lib/types";
 import Link from "next/link";
 
-export default function TeamPage() {
+const fieldClass =
+  "h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm";
+
+export default async function TeamPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>;
+}) {
+  const { error } = await searchParams;
   const ws = readWorkspace();
+  const actor = await getActor();
   const sprint = ws.sprints.find((s) => s.status === "active") ?? null;
   const loads = memberLoads(ws, sprint).sort((a, b) => b.contribution - a.contribution);
 
@@ -18,7 +34,7 @@ export default function TeamPage() {
       <PageHeader
         eyebrow="Team"
         title="Who is carrying the sprint"
-        description="Contribution is a coaching signal: completed sprint work, logging hygiene, and overdue risk. It is not a stack rank for performance reviews."
+        description="Add people when they join the squad. Removing someone unassigns their open tickets so the board stays honest."
         actions={
           <div className="flex gap-2">
             <form action={autoAssignUnownedAction}>
@@ -30,11 +46,72 @@ export default function TeamPage() {
           </div>
         }
       />
+
+      {error === "duplicate" && (
+        <p className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-200">
+          That email is already on the squad. Use a different address or remove the existing teammate first.
+        </p>
+      )}
+
+      <Card>
+        <CardContent className="space-y-3 pt-1">
+          <p className="text-sm font-medium">Add a teammate</p>
+          <form action={addMember} className="grid gap-3 sm:grid-cols-2">
+            <label className="grid gap-1.5 text-xs font-medium">
+              Name
+              <input name="name" required placeholder="Jordan Lee" className={fieldClass} />
+            </label>
+            <label className="grid gap-1.5 text-xs font-medium">
+              Email
+              <input name="email" type="email" placeholder="jordan@harbor.team" className={fieldClass} />
+            </label>
+            <label className="grid gap-1.5 text-xs font-medium">
+              Role
+              <select name="role" defaultValue="engineer" className={fieldClass}>
+                {MEMBER_ROLES.map((role) => (
+                  <option key={role} value={role}>
+                    {roleLabel[role]}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="grid gap-1.5 text-xs font-medium">
+              Title
+              <input name="title" placeholder="Backend Engineer" className={fieldClass} />
+            </label>
+            <label className="grid gap-1.5 text-xs font-medium">
+              Weekly hours
+              <input
+                name="weeklyCapacityHours"
+                type="number"
+                min={1}
+                max={80}
+                defaultValue={40}
+                className={fieldClass}
+              />
+            </label>
+            <label className="grid gap-1.5 text-xs font-medium">
+              Skills
+              <input name="skills" placeholder="payments, react, qa" className={fieldClass} />
+            </label>
+            <div className="sm:col-span-2 flex justify-end">
+              <button
+                type="submit"
+                className="inline-flex h-8 items-center rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground"
+              >
+                Add teammate
+              </button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+
       <div className="grid gap-3 md:grid-cols-2">
         {loads.map((l) => {
           const assigned = ws.tickets.filter(
             (t) => t.assigneeId === l.member.id && t.status !== "done"
           );
+          const canRemove = ws.members.length > 1;
           return (
             <Card key={l.member.id}>
               <CardContent className="space-y-3 pt-1">
@@ -86,6 +163,22 @@ export default function TeamPage() {
                     ))}
                   </div>
                 )}
+                <form
+                  action={removeMember}
+                  className="flex items-center justify-between border-t pt-3"
+                >
+                  <input type="hidden" name="memberId" value={l.member.id} />
+                  <p className="text-[11px] text-muted-foreground">
+                    {l.member.id === actor.id ? "This is you." : l.member.email}
+                  </p>
+                  <button
+                    type="submit"
+                    disabled={!canRemove}
+                    className="h-7 rounded-lg px-2.5 text-xs text-rose-300 hover:bg-rose-500/10 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    Remove
+                  </button>
+                </form>
               </CardContent>
             </Card>
           );
@@ -94,3 +187,4 @@ export default function TeamPage() {
     </div>
   );
 }
+

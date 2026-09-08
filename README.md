@@ -12,7 +12,7 @@ Harbor Squad ships **Harbor Checkout**. Agile Master is the place they log work,
 - **Sprints** — plan, activate, complete; one active increment at a time
 - **Daily log** — yesterday / today / blockers / hours / mood, per teammate
 - **Follow-ups** — coach-drafted nudges for overdue, due-today, stalled, blocked, and missing standups
-- **Team** — coaching-oriented contribution, WIP, and capacity
+- **Team** — add or remove people, plus coaching-oriented contribution, WIP, and capacity. Removing someone unassigns their tickets.
 - **Analytics** — burndown, velocity, completion by person
 - **Agile Coach** — English in, board changes out (`assign AM-122 to Priya`, `run a due-date sweep`, `brief the sprint`)
 
