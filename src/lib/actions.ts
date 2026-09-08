@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import {
   dueBuckets,
   memberLoads,
@@ -92,6 +93,11 @@ export async function createTicket(formData: FormData) {
   });
   bump([`/tickets/${key}`]);
   return { ok: true, key };
+}
+
+export async function createTicketForm(formData: FormData) {
+  const result = await createTicket(formData);
+  if ("key" in result && result.key) redirect(`/tickets/${result.key}`);
 }
 
 export async function updateTicketFields(ticketId: string, patch: Partial<{

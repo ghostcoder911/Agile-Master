@@ -1,46 +1,25 @@
-"use client";
-
-import { switchActor } from "@/lib/actions";
 import type { Member } from "@/lib/types";
-import { useRouter } from "next/navigation";
-import { useEffect, useState, useTransition } from "react";
 
 export function ActorSwitcher({
   members,
   currentId,
+  nextPath,
 }: {
   members: Member[];
   currentId: string;
+  nextPath: string;
 }) {
-  const router = useRouter();
-  const [value, setValue] = useState(currentId);
-  const [pending, start] = useTransition();
-
-  useEffect(() => {
-    setValue(currentId);
-  }, [currentId]);
-
   return (
-    <div>
-      <label className="sr-only" htmlFor="memberId">
+    <form action="/act-as" method="get" className="space-y-1.5">
+      <input type="hidden" name="next" value={nextPath} />
+      <label className="sr-only" htmlFor="am-actor">
         Act as
       </label>
       <select
-        id="memberId"
+        id="am-actor"
         name="memberId"
-        value={value}
-        disabled={pending}
+        defaultValue={currentId}
         className="h-8 w-full rounded-lg border border-sidebar-border bg-sidebar px-2 text-xs"
-        onChange={(e) => {
-          const next = e.target.value;
-          setValue(next);
-          const formData = new FormData();
-          formData.set("memberId", next);
-          start(async () => {
-            await switchActor(formData);
-            router.refresh();
-          });
-        }}
       >
         {members.map((m) => (
           <option key={m.id} value={m.id}>
@@ -48,6 +27,12 @@ export function ActorSwitcher({
           </option>
         ))}
       </select>
-    </div>
+      <button
+        type="submit"
+        className="h-7 w-full rounded-lg bg-sidebar-accent text-[11px] font-medium text-sidebar-accent-foreground"
+      >
+        Switch identity
+      </button>
+    </form>
   );
 }

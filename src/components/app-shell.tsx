@@ -100,7 +100,7 @@ export function AppShell({
               <p className="truncate text-[11px] text-muted-foreground">{actor.title}</p>
             </div>
           </div>
-          <ActorSwitcher members={members} currentId={actor.id} />
+          <ActorSwitcher members={members} currentId={actor.id} nextPath={pathname} />
         </div>
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">

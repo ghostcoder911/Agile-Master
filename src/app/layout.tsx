@@ -49,9 +49,15 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
             >
               {children}
             </AppShell>
-            <Toaster />
+            <Toaster theme="dark" />
           </TooltipProvider>
         </ThemeProvider>
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "document.addEventListener('change',function(e){var t=e.target;if(t&&t.id==='am-actor'&&t.form){t.form.submit();}});",
+          }}
+        />
       </body>
     </html>
   );
