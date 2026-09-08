@@ -340,13 +340,15 @@ async function answerWithOpenAI(ws: Workspace, message: string, history: { role:
   const key = process.env.OPENAI_API_KEY;
   if (!key) return null;
   const context = compactContext(ws);
-  const res = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${key}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
+  try {
+    const res = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${key}`,
+        "Content-Type": "application/json",
+      },
+      signal: AbortSignal.timeout(8000),
+      body: JSON.stringify({
       model: process.env.OPENAI_MODEL ?? "gpt-4o-mini",
       temperature: 0.2,
       messages: [
@@ -362,11 +364,14 @@ async function answerWithOpenAI(ws: Workspace, message: string, history: { role:
       ],
     }),
   });
-  if (!res.ok) return null;
-  const json = (await res.json()) as {
-    choices?: { message?: { content?: string } }[];
-  };
-  return json.choices?.[0]?.message?.content ?? null;
+    if (!res.ok) return null;
+    const json = (await res.json()) as {
+      choices?: { message?: { content?: string } }[];
+    };
+    return json.choices?.[0]?.message?.content ?? null;
+  } catch {
+    return null;
+  }
 }
 
 export async function runAgent(message: string): Promise<AgentResult> {

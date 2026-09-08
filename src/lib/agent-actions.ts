@@ -15,11 +15,19 @@ export async function askCoach(formData: FormData) {
 }
 
 export async function askCoachText(message: string) {
-  const result = await runAgent(message);
-  revalidatePath("/agent");
-  revalidatePath("/");
-  revalidatePath("/follow-ups");
-  revalidatePath("/board");
-  revalidatePath("/team");
-  return result;
+  try {
+    const result = await runAgent(message);
+    revalidatePath("/agent");
+    revalidatePath("/");
+    revalidatePath("/follow-ups");
+    revalidatePath("/board");
+    revalidatePath("/team");
+    return result;
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : "Unknown error";
+    return {
+      reply: `I could not finish that request: ${detail}`,
+      actions: [] as string[],
+    };
+  }
 }

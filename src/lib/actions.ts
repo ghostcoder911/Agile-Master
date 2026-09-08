@@ -42,6 +42,7 @@ export async function switchActor(formData: FormData) {
   const id = String(formData.get("memberId") ?? "");
   const ws = readWorkspace();
   if (ws.members.some((m) => m.id === id)) await setActorId(id);
+  revalidatePath("/", "layout");
   bump();
 }
 

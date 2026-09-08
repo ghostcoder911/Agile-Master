@@ -33,12 +33,12 @@ export default async function StandupPage() {
       <div className="grid gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle>
+            <CardTitle key={actor.id}>
               {actor.name} · {today}
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <form action={submitStandup} className="grid gap-3">
+            <form action={submitStandup} key={actor.id} className="grid gap-3">
               <input type="hidden" name="date" value={today} />
               <div className="grid gap-1.5">
                 <Label htmlFor="yesterday">Yesterday</Label>
