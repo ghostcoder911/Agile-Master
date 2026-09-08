@@ -402,10 +402,6 @@ export async function autoAssignUnownedAction() {
   await autoAssignUnowned();
 }
 
-export function workspaceSnapshot(): Workspace {
-  return readWorkspace();
-}
-
 export async function sprintBrief() {
   const ws = readWorkspace();
   const sprint = ws.sprints.find((s) => s.status === "active");
