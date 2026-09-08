@@ -16,7 +16,7 @@ Harbor Squad ships **Harbor Checkout**. Agile Master is the place they log work,
 - **Analytics** — burndown, velocity, completion by person
 - **Agile Coach** — English in, board changes out (`assign AM-122 to Priya`, `run a due-date sweep`, `brief the sprint`)
 
-There is no login. Switch identity in the left rail to act as a teammate (Product Owner, Scrum Master, engineers, design, QA). Persistence is a local JSON workspace in `data/workspace.json`.
+There is no login. Switch identity in the left rail to act as a teammate (Product Owner, Scrum Master, engineers, design, QA). Persistence is a local JSON workspace in `data/workspace.json` (or `/tmp` on Vercel, which resets on cold starts).
 
 ## Run locally
 
@@ -26,6 +26,10 @@ npm run dev
 ```
 
 Open [http://localhost:4521](http://localhost:4521).
+
+## Deploy on Vercel
+
+This is a standard Next.js app. Import `ghostcoder911/Agile-Master` in Vercel (no env vars required). The demo board is seeded on first request. Board edits survive while the serverless instance is warm; they reset on a cold start because there is no database.
 
 Optional: copy `.env.example` to `.env.local` and set `OPENAI_API_KEY` if you want a more conversational coach. Without a key, the built-in coach still reads the live board, drafts follow-ups, assigns work, and answers sprint questions from real data.
 

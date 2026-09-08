@@ -1,42 +1,46 @@
-import { mkdirSync, readFileSync, writeFileSync, existsSync } from "fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
+import os from "os";
 import path from "path";
 import { createSeedWorkspace } from "@/lib/seed";
 import type { Workspace } from "@/lib/types";
 
-const dataDir = path.join(process.cwd(), "data");
+const dataDir = process.env.VERCEL
+  ? path.join(os.tmpdir(), "agile-master-data")
+  : path.join(process.cwd(), "data");
 const dataFile = path.join(dataDir, "workspace.json");
 
 let cache: Workspace | null = null;
 let writeChain: Promise<void> = Promise.resolve();
 
-function ensureDir() {
-  if (!existsSync(dataDir)) mkdirSync(dataDir, { recursive: true });
+function persistSync(ws: Workspace) {
+  cache = ws;
+  try {
+    mkdirSync(dataDir, { recursive: true });
+    writeFileSync(dataFile, JSON.stringify(ws, null, 2));
+  } catch {
+    // Vercel / read-only FS: keep the in-memory board for this instance.
+  }
 }
 
 export function readWorkspace(): Workspace {
   if (cache) return cache;
-  ensureDir();
-  if (!existsSync(dataFile)) {
-    cache = createSeedWorkspace();
-    writeFileSync(dataFile, JSON.stringify(cache, null, 2));
-    return cache;
-  }
   try {
-    cache = JSON.parse(readFileSync(dataFile, "utf8")) as Workspace;
-    return cache;
+    if (existsSync(dataFile)) {
+      cache = JSON.parse(readFileSync(dataFile, "utf8")) as Workspace;
+      return cache;
+    }
   } catch {
-    cache = createSeedWorkspace();
-    writeFileSync(dataFile, JSON.stringify(cache, null, 2));
-    return cache;
+    // fall through to seed
   }
+  cache = createSeedWorkspace();
+  persistSync(cache);
+  return cache;
 }
 
 export async function writeWorkspace(next: Workspace) {
   cache = next;
-  const payload = JSON.stringify(next, null, 2);
   writeChain = writeChain.then(() => {
-    ensureDir();
-    writeFileSync(dataFile, payload);
+    persistSync(next);
   });
   await writeChain;
 }
